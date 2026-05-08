@@ -1,9 +1,25 @@
+import React from 'react'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { RootLayout } from './layouts/RootLayout'
 import { AuthLayout } from './layouts/AuthLayout'
 import { LoginPage } from './pages/auth/LoginPage'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
+import { ComponentLibraryPage } from './pages/components/ComponentLibraryPage'
+import { ComponentDetailPage } from './pages/components/ComponentDetailPage'
+import { ContentListPage } from './pages/content/ContentListPage'
+import { ContentDetailPage } from './pages/content/ContentDetailPage'
+import { ChannelsPage } from './pages/channels/ChannelsPage'
+import { PagesListPage } from './pages/pages/PagesListPage'
+import { AssetLibraryPage } from './pages/dam/AssetLibraryPage'
+import { TargetingRulesPage } from './pages/targeting/TargetingRulesPage'
+import { ExperiencesPage } from './pages/experiences/ExperiencesPage'
+import { CampaignListPage } from './pages/campaigns/CampaignListPage'
+import { CampaignDetailPage } from './pages/campaigns/CampaignDetailPage'
+import { LocalesPage } from './pages/locales/LocalesPage'
+import { SeoPage } from './pages/seo/SeoPage'
+import { UsersPage } from './pages/users/UsersPage'
 import { useAuthStore } from './lib/auth-store'
+import { PageBuilderStub } from './pages/pages/PageBuilderStub'
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 const rootRoute = createRootRoute()
@@ -47,110 +63,105 @@ export const dashboardRoute = createRoute({
   component: DashboardPage,
 })
 
-// Placeholder routes — components implemented in later sprints
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-      <p className="text-muted-foreground mt-2">This module is being built.</p>
-    </div>
-  )
-}
-
 export const componentLibraryRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/components',
-  component: () => <PlaceholderPage title="Component Library" />,
+  component: ComponentLibraryPage,
 })
 
 export const componentDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/components/$componentId',
-  component: () => <PlaceholderPage title="Component Detail" />,
+  component: ComponentDetailPage,
 })
 
 export const contentRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/content',
-  component: () => <PlaceholderPage title="Content Pool" />,
+  component: ContentListPage,
 })
 
 export const contentDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/content/$contentId',
-  component: () => <PlaceholderPage title="Content Object" />,
+  component: ContentDetailPage,
 })
 
 export const channelsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/channels',
-  component: () => <PlaceholderPage title="Channels" />,
+  component: ChannelsPage,
 })
 
 export const pagesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/pages',
-  component: () => <PlaceholderPage title="Pages" />,
+  component: PagesListPage,
 })
 
 export const pageBuilderRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/pages/$pageId',
-  component: () => <PlaceholderPage title="Page Builder" />,
+  component: PageBuilderStub,
 })
 
 export const damRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/dam',
-  component: () => <PlaceholderPage title="Asset Library" />,
+  component: AssetLibraryPage,
 })
 
 export const targetingRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/targeting',
-  component: () => <PlaceholderPage title="Targeting Rules" />,
+  component: TargetingRulesPage,
 })
 
 export const experiencesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/experiences',
-  component: () => <PlaceholderPage title="Experiences" />,
+  component: ExperiencesPage,
 })
 
 export const campaignsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/campaigns',
-  component: () => <PlaceholderPage title="Campaigns" />,
+  component: CampaignListPage,
 })
 
 export const campaignDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/campaigns/$campaignId',
-  component: () => <PlaceholderPage title="Campaign Builder" />,
+  component: CampaignDetailPage,
 })
 
 export const localesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/locales',
-  component: () => <PlaceholderPage title="Localization" />,
+  component: LocalesPage,
 })
 
 export const seoRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/seo',
-  component: () => <PlaceholderPage title="SEO Manager" />,
+  component: SeoPage,
 })
 
 export const usersRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/settings/users',
-  component: () => <PlaceholderPage title="Users" />,
+  component: UsersPage,
 })
 
 export const orgSettingsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/settings',
-  component: () => <PlaceholderPage title="Settings" />,
+  component: () => (
+    <div className="p-8">
+      <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+      <p className="text-muted-foreground mt-2">Organization settings coming soon.</p>
+    </div>
+  ),
 })
 
 // ─── Route tree ───────────────────────────────────────────────────────────────
