@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { PageHeader } from '../../components/PageHeader'
@@ -273,15 +273,18 @@ export function TargetingRulesPage() {
       cell: (row) => <span className="text-sm text-muted-foreground">{new Date(row.createdAt).toLocaleDateString()}</span>,
     },
     {
-      key: 'actions', header: '', className: 'w-16',
+      key: 'actions', header: '', className: 'w-36',
       cell: (row) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={e => { e.stopPropagation(); setEditing(row); setShowDialog(true) }}
-        >
-          Edit
-        </Button>
+        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+          <Button size="sm" variant="ghost" onClick={() => { setEditing(row); setShowDialog(true) }}>Edit</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => void navigate({ to: '/targeting/$ruleId/simulate', params: { ruleId: row.id } })}
+          >
+            Simulate
+          </Button>
+        </div>
       ),
     },
   ]

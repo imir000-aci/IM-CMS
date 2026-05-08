@@ -176,6 +176,9 @@ export function ComponentDetailPage() {
             <Button variant="outline" onClick={() => void navigate({ to: '/components' })}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
+            <Button variant="outline" onClick={() => void navigate({ to: '/components/$componentId/bento', params: { componentId } })}>
+              Bento Layout
+            </Button>
             {isDirty && (
               <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? 'Saving…' : 'Save Changes'}

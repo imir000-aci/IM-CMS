@@ -193,6 +193,60 @@ export const seoApi = {
   deleteRedirect: (id: string) => apiClient.delete(`/seo/redirects/${id}`),
 }
 
+// ─── Component Pools ──────────────────────────────────────────────────────────
+
+export const componentPoolsApi = {
+  list: (params?: Record<string, unknown>) =>
+    apiClient.get<PaginatedResponse<ComponentPool>>('/component-pools', { params }),
+  get: (id: string) => apiClient.get<{ data: ComponentPool }>(`/component-pools/${id}`),
+  create: (body: unknown) => apiClient.post<{ data: ComponentPool }>('/component-pools', body),
+  update: (id: string, body: unknown) => apiClient.patch<{ data: ComponentPool }>(`/component-pools/${id}`, body),
+  delete: (id: string) => apiClient.delete(`/component-pools/${id}`),
+  addItem: (id: string, componentInstanceId: string) =>
+    apiClient.post(`/component-pools/${id}/items`, { componentInstanceId }),
+  removeItem: (id: string, itemId: string) =>
+    apiClient.delete(`/component-pools/${id}/items/${itemId}`),
+  reorderItems: (id: string, orderedItemIds: string[]) =>
+    apiClient.patch(`/component-pools/${id}/items/reorder`, { orderedItemIds }),
+}
+
+// ─── Content Pools ────────────────────────────────────────────────────────────
+
+export const contentPoolsApi = {
+  list: (params?: Record<string, unknown>) =>
+    apiClient.get<PaginatedResponse<ContentPool>>('/content-pools', { params }),
+  get: (id: string) => apiClient.get<{ data: ContentPool }>(`/content-pools/${id}`),
+  create: (body: unknown) => apiClient.post<{ data: ContentPool }>('/content-pools', body),
+  update: (id: string, body: unknown) => apiClient.patch<{ data: ContentPool }>(`/content-pools/${id}`, body),
+  delete: (id: string) => apiClient.delete(`/content-pools/${id}`),
+  addItem: (id: string, contentObjectId: string) =>
+    apiClient.post(`/content-pools/${id}/items`, { contentObjectId }),
+  removeItem: (id: string, itemId: string) =>
+    apiClient.delete(`/content-pools/${id}/items/${itemId}`),
+}
+
+// ─── Page Configuration ───────────────────────────────────────────────────────
+
+export const pageConfigApi = {
+  list: (pageId: string) =>
+    apiClient.get<{ data: PageConfig[] }>(`/page-configurations?pageId=${pageId}`),
+  get: (id: string) => apiClient.get<{ data: PageConfig }>(`/page-configurations/${id}`),
+  create: (body: unknown) => apiClient.post<{ data: PageConfig }>('/page-configurations', body),
+  update: (id: string, body: unknown) =>
+    apiClient.patch<{ data: PageConfig }>(`/page-configurations/${id}`, body),
+  delete: (id: string) => apiClient.delete(`/page-configurations/${id}`),
+  listSlotConfigs: (configId: string) =>
+    apiClient.get<{ data: SlotConfig[] }>(`/page-configurations/${configId}/slot-configs`),
+  createSlotConfig: (configId: string, body: unknown) =>
+    apiClient.post<{ data: SlotConfig }>(`/page-configurations/${configId}/slot-configs`, body),
+  updateSlotConfig: (configId: string, slotConfigId: string, body: unknown) =>
+    apiClient.patch<{ data: SlotConfig }>(`/page-configurations/${configId}/slot-configs/${slotConfigId}`, body),
+  deleteSlotConfig: (configId: string, slotConfigId: string) =>
+    apiClient.delete(`/page-configurations/${configId}/slot-configs/${slotConfigId}`),
+  diff: (fromId: string, toId: string) =>
+    apiClient.get<{ data: DiffResult }>(`/page-configurations/diff?from=${fromId}&to=${toId}`),
+}
+
 // ─── Locales ─────────────────────────────────────────────────────────────────
 
 export const localesApi = {
@@ -294,3 +348,38 @@ export interface SeoRedirect {
   id: string; fromPath: string; toPath: string; statusCode: number; isActive: boolean; createdAt: string
 }
 export interface Locale { id: string; code: string; name: string; isDefault: boolean; isActive: boolean }
+export interface ComponentPool {
+  id: string; name: string; description?: string; isActive: boolean; createdAt: string
+  items?: ComponentPoolItem[]
+}
+export interface ComponentPoolItem {
+  id: string; order: number; componentInstanceId: string
+  componentInstance?: { name: string; masterComponent?: { name: string; slug: string } }
+}
+export interface ContentPool {
+  id: string; name: string; description?: string; isActive: boolean; createdAt: string
+  items?: ContentPoolItem[]
+}
+export interface ContentPoolItem {
+  id: string; order: number; contentObjectId: string
+  contentObject?: { name: string; type: string }
+}
+export interface PageConfig {
+  id: string; pageId: string; campaignId?: string; priority: number; isActive: boolean
+  campaign?: { name: string; status: string }
+  slotConfigs?: SlotConfig[]
+}
+export interface SlotConfig {
+  id: string; pageConfigurationId: string; priority: number
+  slotId?: string; subSlotId?: string
+  experienceId?: string; componentInstanceId?: string; contentObjectId?: string; targetingRuleId?: string
+  experience?: { name: string }
+  componentInstance?: { name: string }
+  contentObject?: { name: string }
+}
+export interface DiffChange {
+  type: 'added' | 'removed' | 'modified'
+  slotId?: string; subSlotId?: string
+  from?: SlotConfig; to?: SlotConfig
+}
+export interface DiffResult { changes: DiffChange[] }

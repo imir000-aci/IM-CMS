@@ -6,20 +6,27 @@ import { LoginPage } from './pages/auth/LoginPage'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
 import { ComponentLibraryPage } from './pages/components/ComponentLibraryPage'
 import { ComponentDetailPage } from './pages/components/ComponentDetailPage'
+import { ComponentInstanceListPage } from './pages/components/ComponentInstanceListPage'
+import { ComponentPoolsListPage } from './pages/components/ComponentPoolsListPage'
+import { ComponentPoolDetailPage } from './pages/components/ComponentPoolDetailPage'
+import { BentoLayoutEditorPage } from './pages/components/BentoLayoutEditorPage'
 import { ContentListPage } from './pages/content/ContentListPage'
 import { ContentDetailPage } from './pages/content/ContentDetailPage'
 import { ChannelsPage } from './pages/channels/ChannelsPage'
 import { PagesListPage } from './pages/pages/PagesListPage'
+import { PageBuilderStub } from './pages/pages/PageBuilderStub'
+import { PageConfigPage } from './pages/pages/PageConfigPage'
 import { AssetLibraryPage } from './pages/dam/AssetLibraryPage'
 import { TargetingRulesPage } from './pages/targeting/TargetingRulesPage'
+import { TargetingSimulatorPage } from './pages/targeting/TargetingSimulatorPage'
 import { ExperiencesPage } from './pages/experiences/ExperiencesPage'
+import { ExperienceDetailPage } from './pages/experiences/ExperienceDetailPage'
 import { CampaignListPage } from './pages/campaigns/CampaignListPage'
 import { CampaignDetailPage } from './pages/campaigns/CampaignDetailPage'
 import { LocalesPage } from './pages/locales/LocalesPage'
 import { SeoPage } from './pages/seo/SeoPage'
 import { UsersPage } from './pages/users/UsersPage'
 import { useAuthStore } from './lib/auth-store'
-import { PageBuilderStub } from './pages/pages/PageBuilderStub'
 
 // ─── Root route ───────────────────────────────────────────────────────────────
 const rootRoute = createRootRoute()
@@ -75,6 +82,30 @@ export const componentDetailRoute = createRoute({
   component: ComponentDetailPage,
 })
 
+export const componentBentoRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/components/$componentId/bento',
+  component: BentoLayoutEditorPage,
+})
+
+export const componentInstancesRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/component-instances',
+  component: ComponentInstanceListPage,
+})
+
+export const componentPoolsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/component-pools',
+  component: ComponentPoolsListPage,
+})
+
+export const componentPoolDetailRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/component-pools/$poolId',
+  component: ComponentPoolDetailPage,
+})
+
 export const contentRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/content',
@@ -105,6 +136,12 @@ export const pageBuilderRoute = createRoute({
   component: PageBuilderStub,
 })
 
+export const pageConfigRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/pages/$pageId/config',
+  component: PageConfigPage,
+})
+
 export const damRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/dam',
@@ -121,6 +158,18 @@ export const experiencesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/experiences',
   component: ExperiencesPage,
+})
+
+export const experienceDetailRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/experiences/$experienceId',
+  component: ExperienceDetailPage,
+})
+
+export const targetingSimulatorRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/targeting/$ruleId/simulate',
+  component: TargetingSimulatorPage,
 })
 
 export const campaignsRoute = createRoute({
@@ -172,14 +221,21 @@ const routeTree = rootRoute.addChildren([
     dashboardRoute,
     componentLibraryRoute,
     componentDetailRoute,
+    componentBentoRoute,
+    componentInstancesRoute,
+    componentPoolsRoute,
+    componentPoolDetailRoute,
     contentRoute,
     contentDetailRoute,
     channelsRoute,
     pagesRoute,
     pageBuilderRoute,
+    pageConfigRoute,
     damRoute,
     targetingRoute,
+    targetingSimulatorRoute,
     experiencesRoute,
+    experienceDetailRoute,
     campaignsRoute,
     campaignDetailRoute,
     localesRoute,

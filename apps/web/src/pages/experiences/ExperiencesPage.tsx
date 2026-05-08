@@ -182,6 +182,7 @@ export function ExperiencesPage() {
           keyFn={r => r.id}
           loading={isLoading}
           emptyMessage="No experiences yet."
+          onRowClick={row => void navigate({ to: '/experiences/$experienceId', params: { experienceId: row.id } })}
         />
 
         {meta?.total && meta.total > 20 && (
