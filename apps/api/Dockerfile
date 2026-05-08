@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
 FROM base AS deps
@@ -18,15 +18,20 @@ RUN pnpm --filter @im-cms/rule-engine build
 RUN pnpm --filter @im-cms/api prisma:generate
 RUN pnpm --filter @im-cms/api build
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/prisma ./prisma
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/package.json ./
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+COPY --from=builder --chown=appuser:appgroup /app/apps/api/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/apps/api/prisma ./prisma
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/apps/api/package.json ./
 
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
+
+CMD ["node", "--enable-source-maps", "dist/main.js"]

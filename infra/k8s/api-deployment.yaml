@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: im-cms-api
+  labels:
+    app: im-cms-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: im-cms-api
+  template:
+    metadata:
+      labels:
+        app: im-cms-api
+    spec:
+      containers:
+        - name: api
+          image: im-cms/api:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: API_PORT
+              value: "3000"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: im-cms-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: im-cms-secrets
+                  key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: im-cms-secrets
+                  key: JWT_SECRET
+            - name: S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: im-cms-config
+                  key: S3_ENDPOINT
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: im-cms-config
+                  key: S3_BUCKET
+            - name: CDN_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: im-cms-config
+                  key: CDN_BASE_URL
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: im-cms-api
+spec:
+  selector:
+    app: im-cms-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP

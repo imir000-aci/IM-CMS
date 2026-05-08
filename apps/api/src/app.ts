@@ -23,6 +23,9 @@ import targetingRuleRoutes from './modules/targeting/targeting-rule.routes.js'
 import experienceRoutes from './modules/experiences/experience.routes.js'
 import pageConfigRoutes from './modules/page-config/page-config.routes.js'
 import campaignRoutes from './modules/campaigns/campaign.routes.js'
+import experimentationRoutes from './modules/experimentation/experimentation.routes.js'
+import localeRoutes from './modules/localization/locale.routes.js'
+import seoRoutes from './modules/seo/seo.routes.js'
 import { registerPresenceHandler } from './websocket/presence.handler.js'
 
 export async function buildApp() {
@@ -114,9 +117,9 @@ export async function buildApp() {
   await app.register(campaignRoutes, { prefix: '/api/v1/campaigns' })
   registerPresenceHandler(app)
 
-  // Phase 4 (added in later sprints):
-  // await app.register(localeRoutes, { prefix: '/api/v1/locales' })
-  // await app.register(seoRoutes, { prefix: '/api/v1/seo' })
+  await app.register(experimentationRoutes, { prefix: '/api/v1/experiment-mappings' })
+  await app.register(localeRoutes, { prefix: '/api/v1/locales' })
+  await app.register(seoRoutes, { prefix: '/api/v1/seo' })
 
   return app
 }
