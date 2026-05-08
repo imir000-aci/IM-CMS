@@ -115,6 +115,7 @@ model User {
   displayName    String
   avatarUrl      String?
   role           Role
+  passwordHash   String?
   externalId     String?
   isActive       Boolean   @default(true)
   lastLoginAt    DateTime?

@@ -12,7 +12,6 @@ export const refreshBodySchema = z.object({
 export type LoginBody = z.infer<typeof loginBodySchema>
 export type RefreshBody = z.infer<typeof refreshBodySchema>
 
-// JSON Schema for Fastify route validation
 export const loginJsonSchema = {
   body: {
     type: 'object',

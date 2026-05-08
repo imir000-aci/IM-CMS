@@ -1,4 +1,5 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
+import { promisify } from 'node:util'
 import { prisma } from '../../config/database.js'
 import { getRedis } from '../../config/redis.js'
 import { CacheKeys } from '../../shared/cache-keys.js'
@@ -6,31 +7,66 @@ import { UnauthorizedError, NotFoundError } from '../../shared/errors.js'
 import type { FastifyInstance } from 'fastify'
 import type { JWTPayload } from '../../types/fastify.js'
 
-const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
+const scryptAsync = promisify(scrypt)
+
+const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60
 const ACCESS_TOKEN_EXPIRY = '15m'
 const REFRESH_TOKEN_BYTES = 48
+const SCRYPT_KEYLEN = 64
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex')
+  const derived = (await scryptAsync(password, salt, SCRYPT_KEYLEN)) as Buffer
+  return `${salt}:${derived.toString('hex')}`
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [salt, hash] = stored.split(':')
+  if (!salt || !hash) return false
+  const derived = (await scryptAsync(password, salt, SCRYPT_KEYLEN)) as Buffer
+  const storedBuf = Buffer.from(hash, 'hex')
+  if (derived.length !== storedBuf.length) return false
+  return timingSafeEqual(derived, storedBuf)
 }
 
 export async function loginWithPassword(
   fastify: FastifyInstance,
   email: string,
   password: string,
+  ipAddress?: string,
+  userAgent?: string,
 ): Promise<{ accessToken: string; refreshToken: string; user: { id: string; email: string; displayName: string; role: string } }> {
   const user = await prisma.user.findFirst({
     where: { email, isActive: true },
   })
-  if (!user) {
+
+  if (!user || !user.passwordHash) {
+    // Use constant-time delay to prevent timing attacks revealing valid emails
+    await hashPassword('dummy-constant-time-work')
     throw new UnauthorizedError('Invalid email or password')
   }
 
-  // In a real system, passwords are hashed with bcrypt/argon2.
-  // This placeholder compares directly — replace before production.
-  // The stored password hash column would be added in a future migration.
-  void password
-  throw new UnauthorizedError('Password authentication not yet implemented — configure SSO')
+  const valid = await verifyPassword(password, user.passwordHash)
+  if (!valid) {
+    throw new UnauthorizedError('Invalid email or password')
+  }
+
+  const { accessToken, refreshToken } = await loginWithExternalUser(
+    fastify,
+    user.id,
+    ipAddress,
+    userAgent,
+  )
+
+  return {
+    accessToken,
+    refreshToken,
+    user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role },
+  }
 }
 
 export async function loginWithExternalUser(
@@ -58,8 +94,8 @@ export async function loginWithExternalUser(
 
   const rawRefreshToken = randomBytes(REFRESH_TOKEN_BYTES).toString('base64url')
   const tokenHash = hashToken(rawRefreshToken)
-
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000)
+
   await prisma.userSession.create({
     data: { userId: user.id, tokenHash, expiresAt, ipAddress, userAgent },
   })
@@ -81,7 +117,6 @@ export async function refreshAccessToken(
 ): Promise<{ accessToken: string }> {
   const tokenHash = hashToken(rawRefreshToken)
 
-  // Check Redis first (fast path)
   const redis = getRedis()
   const cachedUserId = await redis.get(CacheKeys.session(tokenHash))
   if (!cachedUserId) {
@@ -127,12 +162,4 @@ export async function revokeAllSessions(userId: string): Promise<void> {
   await prisma.userSession.deleteMany({ where: { userId } })
   const redis = getRedis()
   await Promise.all(sessions.map((s) => redis.del(CacheKeys.session(s.tokenHash))))
-}
-
-// Constant-time comparison to prevent timing attacks
-export function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  const bufA = Buffer.from(a)
-  const bufB = Buffer.from(b)
-  return timingSafeEqual(bufA, bufB)
 }

@@ -10,6 +10,15 @@ import multipartPlugin from './plugins/multipart.js'
 import websocketPlugin from './plugins/websocket.js'
 import { AppError } from './shared/errors.js'
 import authRoutes from './modules/auth/auth.routes.js'
+import userRoutes from './modules/users/users.routes.js'
+import masterComponentRoutes from './modules/components/master/master-component.routes.js'
+import componentInstanceRoutes from './modules/components/instances/component-instance.routes.js'
+import componentPoolRoutes from './modules/pools/component-pool.routes.js'
+import contentObjectRoutes from './modules/content/content-object.routes.js'
+import contentPoolRoutes from './modules/content/content-pool.routes.js'
+import channelRoutes from './modules/channels/channel.routes.js'
+import pageRoutes from './modules/pages/page.routes.js'
+import damRoutes from './modules/dam/dam.routes.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -83,18 +92,17 @@ export async function buildApp() {
 
   // API routes
   await app.register(authRoutes, { prefix: '/api/v1/auth' })
+  await app.register(userRoutes, { prefix: '/api/v1/users' })
+  await app.register(masterComponentRoutes, { prefix: '/api/v1/components' })
+  await app.register(componentInstanceRoutes, { prefix: '/api/v1/component-instances' })
+  await app.register(componentPoolRoutes, { prefix: '/api/v1/component-pools' })
+  await app.register(contentObjectRoutes, { prefix: '/api/v1/content' })
+  await app.register(contentPoolRoutes, { prefix: '/api/v1/content-pools' })
+  await app.register(channelRoutes, { prefix: '/api/v1/channels' })
+  await app.register(pageRoutes, { prefix: '/api/v1/pages' })
+  await app.register(damRoutes, { prefix: '/api/v1/assets' })
 
-  // Placeholder registrations for modules built in subsequent sprints
-  // Each sprint adds the corresponding import and registration here:
-  // await app.register(userRoutes, { prefix: '/api/v1/users' })
-  // await app.register(componentRoutes, { prefix: '/api/v1/components' })
-  // await app.register(componentInstanceRoutes, { prefix: '/api/v1/component-instances' })
-  // await app.register(componentPoolRoutes, { prefix: '/api/v1/component-pools' })
-  // await app.register(contentRoutes, { prefix: '/api/v1/content' })
-  // await app.register(contentPoolRoutes, { prefix: '/api/v1/content-pools' })
-  // await app.register(channelRoutes, { prefix: '/api/v1/channels' })
-  // await app.register(pageRoutes, { prefix: '/api/v1/pages' })
-  // await app.register(assetRoutes, { prefix: '/api/v1/assets' })
+  // Registrations for Phase 2-4 modules (added in later sprints):
   // await app.register(targetingRoutes, { prefix: '/api/v1/targeting-rules' })
   // await app.register(experienceRoutes, { prefix: '/api/v1/experiences' })
   // await app.register(pageConfigRoutes, { prefix: '/api/v1/page-configurations' })
