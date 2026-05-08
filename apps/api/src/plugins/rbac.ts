@@ -7,9 +7,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   PLATFORM_ADMIN: [
     'component:read', 'component:write', 'component:delete',
     'content:read', 'content:write', 'content:delete',
-    'campaign:read', 'campaign:write', 'campaign:approve', 'campaign:publish',
+    'page:read', 'page:write', 'page:delete',
+    'campaign:read', 'campaign:write', 'campaign:delete', 'campaign:approve', 'campaign:publish',
     'user:manage',
-    'asset:read', 'asset:write',
+    'asset:read', 'asset:write', 'asset:delete',
     'targeting:read', 'targeting:write',
     'experience:read', 'experience:write',
     'analytics:read',
@@ -17,14 +18,16 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   DEVELOPER: [
     'component:read', 'component:write', 'component:delete',
     'content:read', 'content:write',
+    'page:read', 'page:write',
     'campaign:read',
     'asset:read', 'asset:write',
     'targeting:read', 'targeting:write',
     'experience:read', 'experience:write',
   ],
   CAMPAIGN_MANAGER: [
-    'campaign:read', 'campaign:write', 'campaign:approve', 'campaign:publish',
+    'campaign:read', 'campaign:write', 'campaign:delete', 'campaign:approve', 'campaign:publish',
     'content:read', 'content:write',
+    'page:read', 'page:write',
     'component:read',
     'asset:read', 'asset:write',
     'targeting:read', 'targeting:write',
@@ -33,6 +36,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   CONTENT_AUTHOR: [
     'content:read', 'content:write',
+    'page:read',
     'component:read',
     'campaign:read', 'campaign:write',
     'asset:read', 'asset:write',
@@ -41,6 +45,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   APPROVER: [
     'campaign:read', 'campaign:approve',
     'content:read',
+    'page:read',
     'component:read',
     'asset:read',
     'experience:read',
@@ -50,6 +55,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'analytics:read',
     'campaign:read',
     'content:read',
+    'page:read',
     'component:read',
   ],
 }

@@ -19,6 +19,11 @@ import contentPoolRoutes from './modules/content/content-pool.routes.js'
 import channelRoutes from './modules/channels/channel.routes.js'
 import pageRoutes from './modules/pages/page.routes.js'
 import damRoutes from './modules/dam/dam.routes.js'
+import targetingRuleRoutes from './modules/targeting/targeting-rule.routes.js'
+import experienceRoutes from './modules/experiences/experience.routes.js'
+import pageConfigRoutes from './modules/page-config/page-config.routes.js'
+import campaignRoutes from './modules/campaigns/campaign.routes.js'
+import { registerPresenceHandler } from './websocket/presence.handler.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -102,11 +107,14 @@ export async function buildApp() {
   await app.register(pageRoutes, { prefix: '/api/v1/pages' })
   await app.register(damRoutes, { prefix: '/api/v1/assets' })
 
-  // Registrations for Phase 2-4 modules (added in later sprints):
-  // await app.register(targetingRoutes, { prefix: '/api/v1/targeting-rules' })
-  // await app.register(experienceRoutes, { prefix: '/api/v1/experiences' })
-  // await app.register(pageConfigRoutes, { prefix: '/api/v1/page-configurations' })
-  // await app.register(campaignRoutes, { prefix: '/api/v1/campaigns' })
+  await app.register(targetingRuleRoutes, { prefix: '/api/v1/targeting-rules' })
+  await app.register(experienceRoutes, { prefix: '/api/v1/experiences' })
+  await app.register(pageConfigRoutes, { prefix: '/api/v1/page-configurations' })
+
+  await app.register(campaignRoutes, { prefix: '/api/v1/campaigns' })
+  registerPresenceHandler(app)
+
+  // Phase 4 (added in later sprints):
   // await app.register(localeRoutes, { prefix: '/api/v1/locales' })
   // await app.register(seoRoutes, { prefix: '/api/v1/seo' })
 

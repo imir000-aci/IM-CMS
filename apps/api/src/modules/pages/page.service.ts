@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/database.js'
 import { NotFoundError, ConflictError } from '../../shared/errors.js'
 import { parsePagination, toPrismaSkipTake, toPaginatedResponse } from '../../shared/pagination.js'
+import { publishQueue } from '../../workers/publish.worker.js'
 
 const PAGE_SELECT = {
   id: true,
@@ -155,11 +156,13 @@ export async function deletePage(orgId: string, id: string) {
 export async function publishPage(orgId: string, id: string) {
   const existing = await prisma.page.findFirst({ where: { id, organizationId: orgId } })
   if (!existing) throw new NotFoundError('Page', id)
-  return prisma.page.update({
+  const page = await prisma.page.update({
     where: { id },
     data: { isPublished: true, publishedAt: new Date() },
     select: PAGE_SELECT,
   })
+  await publishQueue.add('invalidate-page', { type: 'page', pageId: id, orgId })
+  return page
 }
 
 // Zone management
