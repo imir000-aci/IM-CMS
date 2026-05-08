@@ -1,0 +1,889 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto, pg_trgm, uuid_ossp]
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  PLATFORM_ADMIN
+  CONTENT_AUTHOR
+  CAMPAIGN_MANAGER
+  DEVELOPER
+  APPROVER
+  ANALYST
+}
+
+enum ContentObjectType {
+  TEXT
+  RICH_TEXT
+  IMAGE
+  VIDEO
+  CTA
+  HTML_SNIPPET
+  DATA_FEED
+}
+
+enum CampaignStatus {
+  DRAFT
+  REVIEW
+  SCHEDULED
+  PREVIEW
+  PRODUCTION
+  ARCHIVED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+enum ExperienceScope {
+  GLOBAL
+  CAMPAIGN
+}
+
+enum RuleScope {
+  GLOBAL
+  CAMPAIGN
+  PAGE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+enum TranslationStatus {
+  UNTRANSLATED
+  IN_PROGRESS
+  REVIEW
+  APPROVED
+}
+
+enum CollisionResolution {
+  PRIORITIZE
+  EXCLUDE
+  TIME_SHIFT
+  OVERRIDE
+}
+
+// ============================================================
+// AUTH / USERS
+// ============================================================
+
+model Organization {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String   @unique
+  samlConfig Json?
+  oidcConfig Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users            User[]
+  channels         Channel[]
+  masterComponents MasterComponent[]
+  componentPools   ComponentPool[]
+  contentPools     ContentPool[]
+  targetingRules   TargetingRule[]
+  experiences      Experience[]
+  assets           Asset[]
+  locales          Locale[]
+  seoRedirects     SeoRedirect[]
+  campaigns        Campaign[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @db.Uuid
+  email          String
+  displayName    String
+  avatarUrl      String?
+  role           Role
+  externalId     String?
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization     Organization   @relation(fields: [organizationId], references: [id])
+  sessions         UserSession[]
+  auditLogs        AuditLog[]
+  approvalSteps    ApprovalStep[]
+  comments         Comment[]
+  createdCampaigns Campaign[]     @relation("CampaignCreatedBy")
+
+  @@unique([organizationId, email])
+  @@index([organizationId, role])
+  @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_sessions")
+}
+
+// ============================================================
+// MASTER COMPONENT LIBRARY
+// ============================================================
+
+model MasterComponent {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String   @db.Uuid
+  name            String
+  slug            String
+  description     String?
+  category        String?
+  thumbnailUrl    String?
+  attributeSchema Json
+  bentoConfig     Json?
+  isActive        Boolean  @default(true)
+  isDeprecated    Boolean  @default(false)
+  deprecatedAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization             @relation(fields: [organizationId], references: [id])
+  versions     MasterComponentVersion[]
+  instances    ComponentInstance[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, category])
+  @@index([organizationId, isActive])
+  @@map("master_components")
+}
+
+model MasterComponentVersion {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  masterComponentId String   @db.Uuid
+  version           Int
+  attributeSchema   Json
+  bentoConfig       Json?
+  changelog         String?
+  createdById       String?  @db.Uuid
+  createdAt         DateTime @default(now())
+
+  masterComponent MasterComponent @relation(fields: [masterComponentId], references: [id], onDelete: Cascade)
+
+  @@unique([masterComponentId, version])
+  @@map("master_component_versions")
+}
+
+// ============================================================
+// COMPONENT INSTANCES & POOLS
+// ============================================================
+
+model ComponentInstance {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String   @db.Uuid
+  masterComponentId String   @db.Uuid
+  name              String
+  prefilledAttributes Json
+  tags              String[]
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  masterComponent MasterComponent     @relation(fields: [masterComponentId], references: [id])
+  poolItems       ComponentPoolItem[]
+  experiences     Experience[]        @relation("ExperienceComponent")
+  slotConfigs     SlotConfiguration[] @relation("SlotConfigComponent")
+
+  @@index([organizationId, masterComponentId])
+  @@index([organizationId, tags])
+  @@map("component_instances")
+}
+
+model ComponentPool {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id])
+  items        ComponentPoolItem[]
+  campaigns    CampaignComponentPool[]
+
+  @@unique([organizationId, name])
+  @@map("component_pools")
+}
+
+model ComponentPoolItem {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  componentPoolId     String   @db.Uuid
+  componentInstanceId String   @db.Uuid
+  sortOrder           Int      @default(0)
+
+  componentPool     ComponentPool     @relation(fields: [componentPoolId], references: [id], onDelete: Cascade)
+  componentInstance ComponentInstance @relation(fields: [componentInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([componentPoolId, componentInstanceId])
+  @@map("component_pool_items")
+}
+
+// ============================================================
+// CONTENT OBJECTS & POOLS
+// ============================================================
+
+model ContentObject {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String            @db.Uuid
+  name           String
+  type           ContentObjectType
+  fields         Json
+  tags           String[]
+  localeCode     String            @default("en")
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  versions       ContentObjectVersion[]
+  localeVariants ContentObjectLocale[]
+  poolItems      ContentPoolItem[]
+  experiences    Experience[]           @relation("ExperienceContent")
+  slotConfigs    SlotConfiguration[]    @relation("SlotConfigContent")
+
+  @@index([organizationId, type])
+  @@index([organizationId, tags])
+  @@map("content_objects")
+}
+
+model ContentObjectVersion {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contentObjectId String   @db.Uuid
+  version         Int
+  fields          Json
+  changelog       String?
+  createdById     String?  @db.Uuid
+  createdAt       DateTime @default(now())
+
+  contentObject ContentObject @relation(fields: [contentObjectId], references: [id], onDelete: Cascade)
+
+  @@unique([contentObjectId, version])
+  @@map("content_object_versions")
+}
+
+model ContentObjectLocale {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contentObjectId String            @db.Uuid
+  localeCode      String
+  fields          Json
+  status          TranslationStatus @default(UNTRANSLATED)
+  translatedAt    DateTime?
+  reviewedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  contentObject ContentObject @relation(fields: [contentObjectId], references: [id], onDelete: Cascade)
+
+  @@unique([contentObjectId, localeCode])
+  @@map("content_object_locales")
+}
+
+model ContentPool {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  items        ContentPoolItem[]
+  campaigns    CampaignContentPool[]
+
+  @@unique([organizationId, name])
+  @@map("content_pools")
+}
+
+model ContentPoolItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contentPoolId   String   @db.Uuid
+  contentObjectId String   @db.Uuid
+  sortOrder       Int      @default(0)
+
+  contentPool   ContentPool   @relation(fields: [contentPoolId], references: [id], onDelete: Cascade)
+  contentObject ContentObject @relation(fields: [contentObjectId], references: [id], onDelete: Cascade)
+
+  @@unique([contentPoolId, contentObjectId])
+  @@map("content_pool_items")
+}
+
+// ============================================================
+// CHANNELS, PAGES, ZONES, SLOTS
+// ============================================================
+
+model Channel {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  channelType    String   @default("web")
+  baseUrl        String?
+  defaultLocale  String   @default("en")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  pages        Page[]
+  campaigns    CampaignChannel[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, isActive])
+  @@map("channels")
+}
+
+model PageTemplate {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  slug           String
+  zoneLayout     Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  pages Page[]
+
+  @@unique([organizationId, slug])
+  @@map("page_templates")
+}
+
+model Page {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @db.Uuid
+  channelId       String    @db.Uuid
+  templateId      String?   @db.Uuid
+  name            String
+  slug            String
+  path            String
+  metaTitle       String?
+  metaDescription String?
+  ogTags          Json?
+  robots          String?
+  canonicalUrl    String?
+  isPublished     Boolean   @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  channel        Channel             @relation(fields: [channelId], references: [id])
+  template       PageTemplate?       @relation(fields: [templateId], references: [id])
+  zones          Zone[]
+  configurations PageConfiguration[]
+  seoRedirects   SeoRedirect[]
+  campaigns      CampaignPage[]
+
+  @@unique([channelId, slug])
+  @@index([organizationId, channelId])
+  @@index([organizationId, isPublished])
+  @@map("pages")
+}
+
+model Zone {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId      String  @db.Uuid
+  name        String
+  displayName String?
+  sortOrder   Int     @default(0)
+  layoutHint  Json?
+
+  page  Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  slots Slot[]
+
+  @@map("zones")
+}
+
+model Slot {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId        String   @db.Uuid
+  name          String
+  displayName   String?
+  sortOrder     Int      @default(0)
+  maxComponents Int      @default(1)
+  acceptedTypes String[]
+  layoutHint    Json?
+
+  zone        Zone                @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  subSlots    SubSlot[]
+  slotConfigs SlotConfiguration[] @relation("SlotConfigSlot")
+  collisions  CollisionReport[]   @relation("CollisionSlot")
+
+  @@map("slots")
+}
+
+model SubSlot {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slotId        String  @db.Uuid
+  name          String
+  displayName   String?
+  sortOrder     Int     @default(0)
+  maxComponents Int     @default(1)
+
+  slot        Slot                @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  slotConfigs SlotConfiguration[] @relation("SlotConfigSubSlot")
+
+  @@map("sub_slots")
+}
+
+// ============================================================
+// TARGETING RULES
+// ============================================================
+
+model TargetingRule {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  description    String?
+  scope          RuleScope @default(GLOBAL)
+  conditionTree  Json
+  priority       Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization    Organization              @relation(fields: [organizationId], references: [id])
+  experienceRules ExperienceTargetingRule[]
+  campaignRules   CampaignTargetingRule[]
+  slotConfigs     SlotConfiguration[]      @relation("SlotConfigRule")
+
+  @@index([organizationId, scope])
+  @@index([organizationId, isActive])
+  @@map("targeting_rules")
+}
+
+// ============================================================
+// EXPERIENCES
+// ============================================================
+
+model Experience {
+  id                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String          @db.Uuid
+  name                 String
+  scope                ExperienceScope @default(GLOBAL)
+  componentInstanceId  String?         @db.Uuid
+  contentObjectId      String?         @db.Uuid
+  fallbackExperienceId String?         @db.Uuid
+  priority             Int             @default(0)
+  abTestKey            String?
+  abVariantId          String?
+  startDate            DateTime?
+  endDate              DateTime?
+  isActive             Boolean         @default(true)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  organization      Organization              @relation(fields: [organizationId], references: [id])
+  componentInstance ComponentInstance?        @relation("ExperienceComponent", fields: [componentInstanceId], references: [id])
+  contentObject     ContentObject?            @relation("ExperienceContent", fields: [contentObjectId], references: [id])
+  targetingRules    ExperienceTargetingRule[]
+  slotConfigs       SlotConfiguration[]       @relation("SlotConfigExperience")
+  campaignExps      CampaignExperience[]
+  experimentMapping ExperimentMapping?
+
+  @@index([organizationId, scope])
+  @@index([organizationId, isActive, startDate, endDate])
+  @@map("experiences")
+}
+
+model ExperienceTargetingRule {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  experienceId    String   @db.Uuid
+  targetingRuleId String   @db.Uuid
+  sortOrder       Int      @default(0)
+
+  experience    Experience    @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  targetingRule TargetingRule @relation(fields: [targetingRuleId], references: [id], onDelete: Cascade)
+
+  @@unique([experienceId, targetingRuleId])
+  @@map("experience_targeting_rules")
+}
+
+// ============================================================
+// PAGE CONFIGURATION
+// ============================================================
+
+model PageConfiguration {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId      String   @db.Uuid
+  campaignId  String?  @db.Uuid
+  name        String
+  description String?
+  isBaseline  Boolean  @default(false)
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  page        Page              @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  campaign    Campaign?         @relation(fields: [campaignId], references: [id])
+  slotConfigs SlotConfiguration[]
+
+  @@index([pageId, campaignId])
+  @@map("page_configurations")
+}
+
+model SlotConfiguration {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageConfigurationId String  @db.Uuid
+  slotId              String? @db.Uuid
+  subSlotId           String? @db.Uuid
+  experienceId        String? @db.Uuid
+  componentInstanceId String? @db.Uuid
+  contentObjectId     String? @db.Uuid
+  targetingRuleId     String? @db.Uuid
+  priority            Int     @default(0)
+  sortOrder           Int     @default(0)
+
+  pageConfiguration PageConfiguration  @relation(fields: [pageConfigurationId], references: [id], onDelete: Cascade)
+  slot              Slot?              @relation("SlotConfigSlot", fields: [slotId], references: [id])
+  subSlot           SubSlot?           @relation("SlotConfigSubSlot", fields: [subSlotId], references: [id])
+  experience        Experience?        @relation("SlotConfigExperience", fields: [experienceId], references: [id])
+  componentInstance ComponentInstance? @relation("SlotConfigComponent", fields: [componentInstanceId], references: [id])
+  contentObject     ContentObject?     @relation("SlotConfigContent", fields: [contentObjectId], references: [id])
+  targetingRule     TargetingRule?     @relation("SlotConfigRule", fields: [targetingRuleId], references: [id])
+
+  @@index([pageConfigurationId])
+  @@map("slot_configurations")
+}
+
+// ============================================================
+// CAMPAIGNS
+// ============================================================
+
+model Campaign {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String         @db.Uuid
+  name             String
+  description      String?
+  campaignType     String         @default("promotional")
+  status           CampaignStatus @default(DRAFT)
+  priority         Int            @default(0)
+  startDate        DateTime?
+  endDate          DateTime?
+  createdById      String         @db.Uuid
+  clonedFromId     String?        @db.Uuid
+  isArchived       Boolean        @default(false)
+  archivedAt       DateTime?
+  archivedSnapshot Json?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization    Organization          @relation(fields: [organizationId], references: [id])
+  createdBy       User                  @relation("CampaignCreatedBy", fields: [createdById], references: [id])
+  channels        CampaignChannel[]
+  pages           CampaignPage[]
+  experiences     CampaignExperience[]
+  targetingRules  CampaignTargetingRule[]
+  componentPools  CampaignComponentPool[]
+  contentPools    CampaignContentPool[]
+  approvalChain   ApprovalStep[]
+  comments        Comment[]
+  pageConfigs     PageConfiguration[]
+  collisionsSent  CollisionReport[]     @relation("CollisionCampaign")
+  collisionsRecvd CollisionReport[]     @relation("CollisionConflict")
+
+  @@index([organizationId, status])
+  @@index([organizationId, startDate, endDate])
+  @@index([organizationId, isArchived])
+  @@map("campaigns")
+}
+
+model CampaignChannel {
+  campaignId String   @db.Uuid
+  channelId  String   @db.Uuid
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  channel  Channel  @relation(fields: [channelId], references: [id])
+
+  @@id([campaignId, channelId])
+  @@map("campaign_channels")
+}
+
+model CampaignPage {
+  campaignId String   @db.Uuid
+  pageId     String   @db.Uuid
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  page     Page     @relation(fields: [pageId], references: [id])
+
+  @@id([campaignId, pageId])
+  @@map("campaign_pages")
+}
+
+model CampaignExperience {
+  campaignId   String   @db.Uuid
+  experienceId String   @db.Uuid
+
+  campaign   Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  experience Experience @relation(fields: [experienceId], references: [id])
+
+  @@id([campaignId, experienceId])
+  @@map("campaign_experiences")
+}
+
+model CampaignTargetingRule {
+  campaignId      String   @db.Uuid
+  targetingRuleId String   @db.Uuid
+
+  campaign      Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  targetingRule TargetingRule @relation(fields: [targetingRuleId], references: [id])
+
+  @@id([campaignId, targetingRuleId])
+  @@map("campaign_targeting_rules")
+}
+
+model CampaignComponentPool {
+  campaignId      String   @db.Uuid
+  componentPoolId String   @db.Uuid
+
+  campaign      Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  componentPool ComponentPool @relation(fields: [componentPoolId], references: [id])
+
+  @@id([campaignId, componentPoolId])
+  @@map("campaign_component_pools")
+}
+
+model CampaignContentPool {
+  campaignId    String   @db.Uuid
+  contentPoolId String   @db.Uuid
+
+  campaign    Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contentPool ContentPool @relation(fields: [contentPoolId], references: [id])
+
+  @@id([campaignId, contentPoolId])
+  @@map("campaign_content_pools")
+}
+
+// ============================================================
+// APPROVAL WORKFLOW
+// ============================================================
+
+model ApprovalStep {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaignId String         @db.Uuid
+  approverId String         @db.Uuid
+  stepOrder  Int
+  status     ApprovalStatus @default(PENDING)
+  decidedAt  DateTime?
+  comment    String?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  approver User     @relation(fields: [approverId], references: [id])
+
+  @@unique([campaignId, stepOrder])
+  @@map("approval_steps")
+}
+
+// ============================================================
+// COLLISION DETECTION
+// ============================================================
+
+model CollisionReport {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaignId    String               @db.Uuid
+  conflictsWith String               @db.Uuid
+  slotId        String?              @db.Uuid
+  overlapStart  DateTime
+  overlapEnd    DateTime?
+  resolution    CollisionResolution?
+  resolvedAt    DateTime?
+  resolvedById  String?              @db.Uuid
+  createdAt     DateTime             @default(now())
+
+  campaign         Campaign @relation("CollisionCampaign", fields: [campaignId], references: [id])
+  conflictCampaign Campaign @relation("CollisionConflict", fields: [conflictsWith], references: [id])
+  slot             Slot?    @relation("CollisionSlot", fields: [slotId], references: [id])
+
+  @@index([campaignId])
+  @@map("collision_reports")
+}
+
+// ============================================================
+// COMMENTS (campaign collaboration)
+// ============================================================
+
+model Comment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaignId String   @db.Uuid
+  authorId   String   @db.Uuid
+  parentId   String?  @db.Uuid
+  body       String
+  isResolved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id])
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([campaignId])
+  @@map("comments")
+}
+
+// ============================================================
+// ASSETS (DAM)
+// ============================================================
+
+model Asset {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  originalName   String
+  type           AssetType
+  mimeType       String
+  sizeBytes      BigInt
+  s3Key          String    @unique
+  s3Bucket       String
+  cdnUrl         String?
+  width          Int?
+  height         Int?
+  durationSeconds Int?
+  altText        String?
+  tags           String[]
+  metadata       Json?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  renditions   AssetRendition[]
+
+  @@index([organizationId, type])
+  @@index([organizationId, tags])
+  @@map("assets")
+}
+
+model AssetRendition {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId   String   @db.Uuid
+  name      String
+  width     Int?
+  height    Int?
+  format    String
+  sizeBytes BigInt
+  s3Key     String   @unique
+  cdnUrl    String?
+  createdAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, name])
+  @@map("asset_renditions")
+}
+
+// ============================================================
+// SEO
+// ============================================================
+
+model SeoRedirect {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  fromPath       String
+  toPath         String
+  statusCode     Int      @default(301)
+  pageId         String?  @db.Uuid
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  page         Page?        @relation(fields: [pageId], references: [id])
+
+  @@unique([organizationId, fromPath])
+  @@map("seo_redirects")
+}
+
+// ============================================================
+// LOCALIZATION
+// ============================================================
+
+model Locale {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  code           String
+  name           String
+  isDefault      Boolean  @default(false)
+  fallbackCode   String?
+  isRtl          Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, code])
+  @@map("locales")
+}
+
+// ============================================================
+// EXPERIMENTATION
+// ============================================================
+
+model ExperimentMapping {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  experimentKey  String
+  variantId      String
+  experienceId   String   @unique @db.Uuid
+  statusBadge    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  experience Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, experimentKey, variantId])
+  @@map("experiment_mappings")
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String?  @db.Uuid
+  action         String
+  resourceType   String
+  resourceId     String
+  before         Json?
+  after          Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([organizationId, userId])
+  @@map("audit_logs")
+}
