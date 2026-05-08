@@ -1,0 +1,31 @@
+{
+  "name": "im-cms",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "type-check": "turbo run type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "db:generate": "pnpm --filter @im-cms/api prisma generate",
+    "db:migrate": "pnpm --filter @im-cms/api prisma migrate dev",
+    "db:seed": "pnpm --filter @im-cms/api prisma db seed"
+  },
+  "devDependencies": {
+    "@im-cms/eslint-config": "workspace:*",
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^22.0.0",
+    "prettier": "^3.3.0",
+    "turbo": "^2.1.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.0"
+}
