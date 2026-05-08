@@ -23,6 +23,7 @@ import { ExperiencesPage } from './pages/experiences/ExperiencesPage'
 import { ExperienceDetailPage } from './pages/experiences/ExperienceDetailPage'
 import { CampaignListPage } from './pages/campaigns/CampaignListPage'
 import { CampaignDetailPage } from './pages/campaigns/CampaignDetailPage'
+import { ExperimentMappingsPage } from './pages/experiments/ExperimentMappingsPage'
 import { LocalesPage } from './pages/locales/LocalesPage'
 import { SeoPage } from './pages/seo/SeoPage'
 import { UsersPage } from './pages/users/UsersPage'
@@ -184,6 +185,12 @@ export const campaignDetailRoute = createRoute({
   component: CampaignDetailPage,
 })
 
+export const experimentsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/experiments',
+  component: ExperimentMappingsPage,
+})
+
 export const localesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/locales',
@@ -236,6 +243,7 @@ const routeTree = rootRoute.addChildren([
     targetingSimulatorRoute,
     experiencesRoute,
     experienceDetailRoute,
+    experimentsRoute,
     campaignsRoute,
     campaignDetailRoute,
     localesRoute,

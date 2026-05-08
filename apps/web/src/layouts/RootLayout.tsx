@@ -1,24 +1,110 @@
-import { Outlet, Link, useNavigate } from '@tanstack/react-router'
+import React, { useState } from 'react'
+import { Outlet, Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import {
+  LayoutDashboard, Megaphone, Sparkles, FileText, Puzzle,
+  Files, Target, Image, Radio, Search, Settings, Users,
+  Globe, FlaskConical, Layers, Boxes, ChevronDown, ChevronRight,
+} from 'lucide-react'
 import { useAuthStore } from '../lib/auth-store'
 import { apiClient } from '../lib/api-client'
 
-const navItems = [
-  { label: 'Dashboard', path: '/dashboard', icon: '▦' },
-  { label: 'Campaigns', path: '/campaigns', icon: '📢' },
-  { label: 'Experiences', path: '/experiences', icon: '✨' },
-  { label: 'Content', path: '/content', icon: '📝' },
-  { label: 'Components', path: '/components', icon: '🧩' },
-  { label: 'Pages', path: '/pages', icon: '📄' },
-  { label: 'Targeting', path: '/targeting', icon: '🎯' },
-  { label: 'Assets', path: '/dam', icon: '🖼' },
-  { label: 'Channels', path: '/channels', icon: '📡' },
-  { label: 'SEO', path: '/seo', icon: '🔍' },
-  { label: 'Settings', path: '/settings', icon: '⚙' },
+interface NavItem {
+  label: string
+  path: string
+  icon: React.ReactNode
+  children?: NavItem[]
+}
+
+const NAV: NavItem[] = [
+  { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+  { label: 'Campaigns', path: '/campaigns', icon: <Megaphone className="h-4 w-4" /> },
+  { label: 'Experiences', path: '/experiences', icon: <Sparkles className="h-4 w-4" /> },
+  { label: 'Content', path: '/content', icon: <FileText className="h-4 w-4" /> },
+  {
+    label: 'Components', path: '/components', icon: <Puzzle className="h-4 w-4" />,
+    children: [
+      { label: 'Library', path: '/components', icon: <Puzzle className="h-4 w-4" /> },
+      { label: 'Instances', path: '/component-instances', icon: <Boxes className="h-4 w-4" /> },
+      { label: 'Pools', path: '/component-pools', icon: <Layers className="h-4 w-4" /> },
+    ],
+  },
+  { label: 'Pages', path: '/pages', icon: <Files className="h-4 w-4" /> },
+  { label: 'Targeting', path: '/targeting', icon: <Target className="h-4 w-4" /> },
+  { label: 'Assets', path: '/dam', icon: <Image className="h-4 w-4" /> },
+  { label: 'Channels', path: '/channels', icon: <Radio className="h-4 w-4" /> },
+  { label: 'Experiments', path: '/experiments', icon: <FlaskConical className="h-4 w-4" /> },
+  { label: 'Locales', path: '/locales', icon: <Globe className="h-4 w-4" /> },
+  { label: 'SEO', path: '/seo', icon: <Search className="h-4 w-4" /> },
+  {
+    label: 'Settings', path: '/settings', icon: <Settings className="h-4 w-4" />,
+    children: [
+      { label: 'Users', path: '/settings/users', icon: <Users className="h-4 w-4" /> },
+      { label: 'General', path: '/settings', icon: <Settings className="h-4 w-4" /> },
+    ],
+  },
 ]
+
+function NavEntry({ item, currentPath }: { item: NavItem; currentPath: string }) {
+  const isActive = currentPath === item.path || (item.path !== '/dashboard' && currentPath.startsWith(item.path))
+  const hasChildren = item.children && item.children.length > 0
+  const isParentActive = hasChildren && item.children!.some(c => currentPath.startsWith(c.path))
+  const [open, setOpen] = useState(isParentActive)
+
+  if (hasChildren) {
+    return (
+      <div>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors
+            ${isParentActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}
+          `}
+        >
+          {item.icon}
+          <span className="flex-1 text-left">{item.label}</span>
+          {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+        {open && (
+          <div className="ml-3 pl-3 border-l space-y-0.5 mt-0.5">
+            {item.children!.map(child => (
+              <Link
+                key={child.path}
+                to={child.path}
+                className={`flex items-center gap-2.5 px-2 py-1.5 text-sm rounded-md transition-colors
+                  ${currentPath === child.path || (child.path !== '/settings' && currentPath.startsWith(child.path) && child.path !== '/components')
+                    ? 'text-foreground bg-accent font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+              >
+                {child.icon}
+                {child.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      to={item.path}
+      className={`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors
+        ${isActive
+          ? 'text-foreground bg-accent font-medium'
+          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+        }`}
+    >
+      {item.icon}
+      {item.label}
+    </Link>
+  )
+}
 
 export function RootLayout() {
   const { user, clearAuth, refreshToken } = useAuthStore()
   const navigate = useNavigate()
+  const routerState = useRouterState()
+  const currentPath = routerState.location.pathname
 
   const handleLogout = async () => {
     if (refreshToken) {
@@ -40,16 +126,9 @@ export function RootLayout() {
           <span className="font-bold text-lg tracking-tight text-primary">IM-CMS</span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors [&.active]:text-foreground [&.active]:bg-accent [&.active]:font-medium"
-            >
-              <span className="w-4 text-center" aria-hidden>{item.icon}</span>
-              {item.label}
-            </Link>
+        <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+          {NAV.map(item => (
+            <NavEntry key={item.path + item.label} item={item} currentPath={currentPath} />
           ))}
         </nav>
 

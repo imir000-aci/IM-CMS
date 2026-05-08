@@ -193,6 +193,16 @@ export const seoApi = {
   deleteRedirect: (id: string) => apiClient.delete(`/seo/redirects/${id}`),
 }
 
+// ─── Experimentation ──────────────────────────────────────────────────────────
+
+export const experimentationApi = {
+  list: (params?: Record<string, unknown>) =>
+    apiClient.get<PaginatedResponse<ExperimentMapping>>('/experiment-mappings', { params }),
+  get: (id: string) => apiClient.get<{ data: ExperimentMapping }>(`/experiment-mappings/${id}`),
+  create: (body: unknown) => apiClient.post<{ data: ExperimentMapping }>('/experiment-mappings', body),
+  delete: (id: string) => apiClient.delete(`/experiment-mappings/${id}`),
+}
+
 // ─── Component Pools ──────────────────────────────────────────────────────────
 
 export const componentPoolsApi = {
@@ -376,6 +386,10 @@ export interface SlotConfig {
   experience?: { name: string }
   componentInstance?: { name: string }
   contentObject?: { name: string }
+}
+export interface ExperimentMapping {
+  id: string; experimentKey: string; variantKey: string; experienceId: string; isActive: boolean; createdAt: string
+  experience?: { name: string; componentInstance?: { name: string }; contentObject?: { name: string } }
 }
 export interface DiffChange {
   type: 'added' | 'removed' | 'modified'
