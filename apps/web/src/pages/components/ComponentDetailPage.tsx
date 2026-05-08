@@ -62,7 +62,12 @@ function AttributeRow({
             <Input
               type="number"
               value={attr.validationRules?.maxLength ?? ''}
-              onChange={e => onChange({ ...attr, validationRules: { ...attr.validationRules, maxLength: e.target.value ? Number(e.target.value) : undefined } })}
+              onChange={e => {
+                const rules = { ...attr.validationRules }
+                if (e.target.value) rules.maxLength = Number(e.target.value)
+                else delete rules.maxLength
+                onChange({ ...attr, validationRules: rules })
+              }}
               placeholder="200"
             />
           </div>
@@ -70,7 +75,12 @@ function AttributeRow({
             <label className="text-xs text-muted-foreground block mb-1">Regex Pattern</label>
             <Input
               value={attr.validationRules?.regex ?? ''}
-              onChange={e => onChange({ ...attr, validationRules: { ...attr.validationRules, regex: e.target.value || undefined } })}
+              onChange={e => {
+                const rules = { ...attr.validationRules }
+                if (e.target.value) rules.regex = e.target.value
+                else delete rules.regex
+                onChange({ ...attr, validationRules: rules })
+              }}
               placeholder="^[a-z]+"
             />
           </div>
@@ -78,13 +88,12 @@ function AttributeRow({
             <label className="text-xs text-muted-foreground block mb-1">Allowed Values (comma-sep)</label>
             <Input
               value={(attr.validationRules?.allowedValues ?? []).join(', ')}
-              onChange={e => onChange({
-                ...attr,
-                validationRules: {
-                  ...attr.validationRules,
-                  allowedValues: e.target.value ? e.target.value.split(',').map(s => s.trim()) : undefined,
-                },
-              })}
+              onChange={e => {
+                const rules = { ...attr.validationRules }
+                if (e.target.value) rules.allowedValues = e.target.value.split(',').map(s => s.trim())
+                else delete rules.allowedValues
+                onChange({ ...attr, validationRules: rules })
+              }}
               placeholder="small, medium, large"
             />
           </div>

@@ -57,7 +57,7 @@ export function ComponentPoolDetailPage() {
 
   const moveItem = (fromIdx: number, toIdx: number) => {
     const ids = poolItems.map(i => i.id)
-    const [moved] = ids.splice(fromIdx, 1)
+    const moved = ids.splice(fromIdx, 1)[0]!
     ids.splice(toIdx, 0, moved)
     reorderMutation.mutate(ids)
   }

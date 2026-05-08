@@ -125,7 +125,7 @@ function ConditionBuilder({
               key={i}
               node={child}
               onChange={updated => updateChild(i, updated)}
-              onRemove={node.children.length > 1 ? () => removeChild(i) : undefined}
+              {...(node.children.length > 1 ? { onRemove: () => removeChild(i) } : {})}
               depth={0}
             />
           ))}
@@ -242,6 +242,7 @@ function RuleDialog({
 // ─── List page ────────────────────────────────────────────────────────────────
 
 export function TargetingRulesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [showDialog, setShowDialog] = useState(false)

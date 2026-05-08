@@ -26,12 +26,14 @@ export function PageBuilderStub() {
         title={page.name}
         description={`/${page.slug} · ${page.channel?.name ?? '—'}`}
         actions={
-          <Button variant="outline" onClick={() => void navigate({ to: '/pages' })}>
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Button>
-          <Button variant="outline" onClick={() => void navigate({ to: '/pages/$pageId/config', params: { pageId } })}>
-            Slot Config
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => void navigate({ to: '/pages' })}>
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            <Button variant="outline" onClick={() => void navigate({ to: '/pages/$pageId/config', params: { pageId } })}>
+              Slot Config
+            </Button>
+          </div>
         }
       />
       <div className="p-8 space-y-6">

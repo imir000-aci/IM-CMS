@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search } from 'lucide-react'
 import { PageHeader } from '../../components/PageHeader'
@@ -114,6 +115,7 @@ function CreateExperienceDialog({ open, onOpenChange }: { open: boolean; onOpenC
 }
 
 export function ExperiencesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)

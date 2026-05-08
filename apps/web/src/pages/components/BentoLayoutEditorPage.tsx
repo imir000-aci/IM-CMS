@@ -250,7 +250,10 @@ export function BentoLayoutEditorPage() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Background</label>
-                <Select value={selectedTile.bgColor ?? ''} onValueChange={v => updateTile(selectedTile.id, { bgColor: v || undefined })}>
+                <Select value={selectedTile.bgColor ?? ''} onValueChange={v => {
+                  if (v) updateTile(selectedTile.id, { bgColor: v })
+                  else { const { bgColor: _, ...rest } = selectedTile; updateTile(selectedTile.id, rest) }
+                }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COLORS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}

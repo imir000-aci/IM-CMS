@@ -38,7 +38,7 @@ function ApprovalPanel({ campaign }: { campaign: Campaign }) {
 
   const decideMutation = useMutation({
     mutationFn: ({ stepId, decision, comment }: { stepId: string; decision: string; comment?: string }) =>
-      campaignsApi.decide(campaign.id, stepId, { decision, comment }),
+      campaignsApi.decide(campaign.id, stepId, comment !== undefined ? { decision, comment } : { decision }),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['campaigns', campaign.id] }) },
   })
 
