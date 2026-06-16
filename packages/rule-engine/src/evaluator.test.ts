@@ -250,7 +250,7 @@ describe('evaluate – edge cases', () => {
   })
 
   it('null attribute value matches not_exists', () => {
-    const ctx: VisitorContext = { user: { tier: undefined } }
+    const ctx: VisitorContext = { user: {} }
     const tree: ConditionTree = { leaf: { type: 'user_attribute', attribute: 'tier', op: 'not_exists' } }
     expect(evaluate(tree, ctx)).toBe(true)
   })
